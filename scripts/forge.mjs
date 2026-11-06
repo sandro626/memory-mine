@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig, resolveProjectDir } from './lib/config.mjs';
 import { callLLM } from './lib/llm.mjs';
 import { buildCluster, buildPersona, buildMeta, parseJSONLoose, parseClusters } from './lib/prompts.mjs';
+import { slugify } from './lib/journal.mjs';
 import { validateExpertDir } from './lib/validate.mjs';
 
 const args = process.argv.slice(2);
@@ -40,10 +41,21 @@ if (clusters.length === 0) {
 }
 console.log(`类目 ${clusters.length} 个: ${clusters.map(c => `${c.name}(${c.files.length})`).join('、')}`);
 
+// 断点缓存：簇/人格/元数据逐项落盘 expert-out/.work/<名>/，中断重跑自动续（缓存只做恢复、不追踪语料变化；强制重蒸馏删该目录即可）
+const workDir = join(process.cwd(), 'expert-out', '.work', name);
+mkdirSync(workDir, { recursive: true });
+
 // 2. 每簇压缩（语料上限 60K 字符）
 const CAP = 60000;
 const outputs = [];
 for (const c of clusters) {
+  const cachePath = join(workDir, `${slugify(c.name)}.md`);
+  const cached = existsSync(cachePath) ? readFileSync(cachePath, 'utf8').trim() : '';
+  if (cached) {
+    outputs.push({ name: c.name, text: cached });
+    console.log(`[cache] ${c.name} → ${cached.length} 字符`);
+    continue;
+  }
   let corpus = '';
   for (const rel of c.files) {
     const p = join(memoryDir, rel);
@@ -54,16 +66,33 @@ for (const c of clusters) {
   if (!corpus.trim()) continue;
   // glm-5.3 是思考模型：thinking 块消耗输出 token 预算，4096 默认值会被烧光导致正文 0 字符，故显式抬到 32K（上限非目标，无额外成本）
   const { text } = await callLLM({ ...cfg, ...buildCluster({ clusterName: c.name, corpus }), maxTokens: 32768 });
-  outputs.push({ name: c.name, text: text.trim() });
-  console.log(`[cluster] ${c.name} → ${text.trim().length} 字符`);
+  const trimmed = text.trim();
+  if (trimmed) writeFileSync(cachePath, trimmed);
+  outputs.push({ name: c.name, text: trimmed });
+  console.log(`[cluster] ${c.name} → ${trimmed.length} 字符`);
 }
 if (outputs.length === 0) { console.error('语料为空，无法蒸馏'); process.exit(1); }
 
-// 3. 人格 + 市场元数据
+// 3. 人格 + 市场元数据（同样走断点缓存）
 const projectName = projectNameOverride || slug.replace(/^-/, '');
-let persona = (await callLLM({ ...cfg, ...buildPersona({ clusterOutputs: outputs, projectName, lang }), maxTokens: 32768 })).text.trim();
+const personaPath = join(workDir, 'persona.md');
+let persona = existsSync(personaPath) ? readFileSync(personaPath, 'utf8').trim() : '';
+if (persona) {
+  console.log(`[cache] persona → ${persona.length} 字符`);
+} else {
+  persona = (await callLLM({ ...cfg, ...buildPersona({ clusterOutputs: outputs, projectName, lang }), maxTokens: 32768 })).text.trim();
+  if (persona) writeFileSync(personaPath, persona);
+}
 if (persona.length > 30720) persona = persona.slice(0, 30720) + '\n…(已按 30KB 预算截断)';
-const meta = parseJSONLoose((await callLLM({ ...cfg, ...buildMeta({ clusterNames: outputs.map(o => o.name), projectName }), maxTokens: 32768 })).text);
+const metaPath = join(workDir, 'meta.json');
+let meta;
+if (existsSync(metaPath)) {
+  meta = JSON.parse(readFileSync(metaPath, 'utf8'));
+  console.log('[cache] meta.json');
+} else {
+  meta = parseJSONLoose((await callLLM({ ...cfg, ...buildMeta({ clusterNames: outputs.map(o => o.name), projectName }), maxTokens: 32768 })).text);
+  writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+}
 
 // 4. 双出口
 const outDir = join(process.cwd(), 'expert-out', name);

@@ -21,6 +21,7 @@ description: 挖掘 Claude Code 会话转录为长记忆（journal markdown）�
 用法：`node <本技能目录>/scripts/forge.mjs [--scope 类目substring] [--lang zh] [--name 名] [--project-name 显示项目名] [--avatar png路径] [--project 绝对路径]`
 
 - 产出 `expert-out/<名>/`（WorkBuddy 专家插件，已过官方 validator）+ `~/.claude/agents/<名>.md`
+- 中断续跑：簇/人格/元数据逐项缓存在 `expert-out/.work/<名>/`，重跑自动续；强制重蒸馏删该目录即可
 - 默认人格：首席平台架构师（categoryId 02-Engineering）
 - **隐私铁律**：私有语料蒸馏的专家只装本机（~/.workbuddy/plugins/marketplaces/my-experts/plugins/），永不提交公开市场
 
