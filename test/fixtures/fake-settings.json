@@ -1,0 +1,1 @@
+{ "env": { "ANTHROPIC_BASE_URL": "https://gw.example/api", "ANTHROPIC_AUTH_TOKEN": "tok-123", "ANTHROPIC_MODEL": "m-base" } }
