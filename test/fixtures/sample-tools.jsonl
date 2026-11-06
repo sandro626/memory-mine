@@ -1,0 +1,8 @@
+{"type":"user","message":{"role":"user","content":"帮我看下这个报错"},"uuid":"a1"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"我先看看日志"},{"type":"tool_use","name":"Read","input":{"file_path":"x"}}]},"uuid":"a2"}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"file body"}]},"uuid":"a3"}
+{"type":"assistant","isSidechain":true,"message":{"role":"assistant","content":[{"type":"text","text":"子代理内部"}]},"uuid":"a4"}
+{"type":"summary","summary":"旧会话摘要","uuid":"a5"}
+{broken json
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"根因是连接池打满，修法=只跑一个实例"}]},"uuid":"a6"}
+{"type":"user","isMeta":true,"message":{"role":"user","content":"Caveat: 本地命令输出"},"uuid":"a7"}

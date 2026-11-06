@@ -1,0 +1,9 @@
+{
+  "name": "memory-mine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local long-term memory for Claude Code — mine session transcripts into Markdown, forge domain experts",
+  "license": "MIT",
+  "scripts": { "test": "node --test" }
+}
