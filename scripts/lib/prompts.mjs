@@ -24,3 +24,46 @@ export function parseReduceOutput(text) {
   if (!topic || facts.length === 0) return { skip: true };
   return { skip: false, topic, facts };
 }
+
+// ===== forge：语料聚簇与专家蒸馏提示词 =====
+export function parseClusters(indexText) {
+  const clusters = [];
+  let cur = null;
+  for (const line of String(indexText).split('\n')) {
+    if (!line.startsWith('##')) {
+      const h = line.match(/^#\s*—(.+?)—\s*$/) || line.match(/^#\s+(.+?)\s*$/);
+      if (h) { cur = { name: h[1].trim(), files: [] }; clusters.push(cur); continue; }
+    }
+    const m = line.match(/\[[^\]]+\]\(([^)]+?\.md)\)/);
+    if (m && cur) cur.files.push(m[1]);
+  }
+  return clusters.filter(c => c.files.length > 0);
+}
+
+export function buildCluster({ clusterName, corpus }) {
+  return {
+    system: '你是知识压缩器。把输入的项目记忆语料压缩成 ≤3KB 高密度知识，中文，markdown 小节。优先级：裁定（含为什么）> 复发坑（判别方法+修法）> 规范 > 背景。只保留对未来工程决策有用的事实，保留关键文件路径与数值。严禁编造语料中没有的内容。',
+    user: `类目：${clusterName}\n\n语料：\n${corpus}\n\n输出 ≤3KB 高密度知识 markdown（不要用代码块包裹）。`,
+  };
+}
+
+export function buildPersona({ clusterOutputs, projectName, lang }) {
+  return {
+    system: `你是专家人格撰写者。基于给定知识段，撰写「${projectName} 首席平台架构师」人格文档（${lang === 'zh' ? '中文' : 'English'}）。结构：一级标题「首席平台架构师」与 3 句内身份定位 → 「## 工作原则」（5 条内）→ 每个知识段一节（保留原文高密度事实，不稀释）→ 最后「## 业务红线与语境」（把语料中的用户裁定/禁令集中放此节）。总长 ≤30KB。严禁编造。`,
+    user: clusterOutputs.map(c => `【${c.name}】\n${c.text}`).join('\n\n'),
+  };
+}
+
+export function buildMeta({ clusterNames, projectName }) {
+  return {
+    system: `为 WorkBuddy 专家市场生成元数据，严格只输出一个 JSON 对象（无其他文字）：{"displayName":{"zh":"","en":""},"profession":{"zh":"首席平台架构师","en":"Chief Platform Architect"},"displayDescription":{"zh":"","en":""},"tags":[{"zh":"","en":""}],"quickPrompts":[{"zh":"","en":""}]}。硬性要求：displayDescription.zh 必须 40-50 个汉字；tags 恰 3 个；quickPrompts 恰 3 条且第一条是用户最可能的开场提问、具体可执行；全部围绕 ${projectName} 平台工程。`,
+    user: `项目：${projectName}\n知识类目：${clusterNames.join('、')}\n\n输出该 JSON 对象。`,
+  };
+}
+
+export function parseJSONLoose(text) {
+  const s = String(text).indexOf('{');
+  const e = String(text).lastIndexOf('}');
+  if (s < 0 || e <= s) throw new Error('LLM 未返回 JSON 对象');
+  return JSON.parse(String(text).slice(s, e + 1));
+}
