@@ -56,7 +56,7 @@ export function buildPersona({ clusterOutputs, projectName, lang }) {
 
 export function buildMeta({ clusterNames, projectName }) {
   return {
-    system: `为 WorkBuddy 专家市场生成元数据，严格只输出一个 JSON 对象（无其他文字）：{"displayName":{"zh":"","en":""},"profession":{"zh":"首席平台架构师","en":"Chief Platform Architect"},"displayDescription":{"zh":"","en":""},"tags":[{"zh":"","en":""}],"quickPrompts":[{"zh":"","en":""}]}。硬性要求：displayDescription.zh 必须 40-50 个汉字；tags 恰 3 个；quickPrompts 恰 3 条且第一条是用户最可能的开场提问、具体可执行；全部围绕 ${projectName} 平台工程。`,
+    system: `为 WorkBuddy 专家市场生成元数据，严格只输出一个 JSON 对象（无其他文字）：{"displayName":{"zh":"","en":""},"profession":{"zh":"首席平台架构师","en":"Chief Platform Architect"},"displayDescription":{"zh":"","en":""},"tags":[{"zh":"","en":""}],"quickPrompts":[{"zh":"","en":""}]}。硬性要求：displayDescription.zh 逐字数过、连标点严格 40-50 字（写完先数，超长删到范围内、不足补到范围内，此为硬校验违反即拒收）；tags 恰 3 个；quickPrompts 恰 3 条且第一条是用户最可能的开场提问、具体可执行；全部围绕 ${projectName} 平台工程。`,
     user: `项目：${projectName}\n知识类目：${clusterNames.join('、')}\n\n输出该 JSON 对象。`,
   };
 }
