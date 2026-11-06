@@ -14,6 +14,7 @@ const cwd = argValue('--project') || process.cwd();
 const scope = argValue('--scope');
 const lang = argValue('--lang') || 'zh';
 const avatarArg = argValue('--avatar');
+const projectNameOverride = argValue('--project-name');
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 
 const { slug, memoryDir } = resolveProjectDir({ cwd });
@@ -59,7 +60,7 @@ for (const c of clusters) {
 if (outputs.length === 0) { console.error('语料为空，无法蒸馏'); process.exit(1); }
 
 // 3. 人格 + 市场元数据
-const projectName = slug.replace(/^-/, '');
+const projectName = projectNameOverride || slug.replace(/^-/, '');
 let persona = (await callLLM({ ...cfg, ...buildPersona({ clusterOutputs: outputs, projectName, lang }), maxTokens: 32768 })).text.trim();
 if (persona.length > 30720) persona = persona.slice(0, 30720) + '\n…(已按 30KB 预算截断)';
 const meta = parseJSONLoose((await callLLM({ ...cfg, ...buildMeta({ clusterNames: outputs.map(o => o.name), projectName }), maxTokens: 32768 })).text);
