@@ -123,10 +123,22 @@ source: memory-mine
 
 ```
 expert-out/<专家名>/
-├── .codebuddy-plugin/plugin.json   # displayName/profession/tags/quickPrompts/categoryId/expertType:agent
+├── .codebuddy-plugin/plugin.json   # 官方专家市场全字段
+├── avatars/expert.png              # 512×512 PNG ≤500KB（默认占位，--avatar 可换）
 ├── agents/<专家名>.md              # frontmatter + 人格系统提示词
 └── README.md
 ```
+
+### 官方市场上架校验（forge 内置 validator，对齐 open.workbuddy.cn/docs/expert）
+
+- `quickPrompts` 固定 3 条；`defaultInitPrompt` 必须与第 1 条一致
+- `displayDescription.zh` 中文 40-50 字
+- `tags` 固定 3 个（{en,zh} 双语）
+- `avatar` 必填：512×512 PNG、≤500KB，forge 自带默认占位图
+- `categoryId`：架构师类 → `02-Engineering`（官方枚举 15 类）
+- `name` 小写字母+连字符；`expertType: "agent"`；agents frontmatter 含 name/description/displayName/profession/maxTurns
+- 发布链路：zip 提交至 WorkBuddy 开放平台审核
+- **隐私铁律**：从私有语料蒸馏的专家（含公司裁定/报价/红线）只允许本机 my-experts 安装，永不提交公开市场；公开发布的只能是本工具本身或脱敏人格
 
 - 双出口：同一人格另写 `~/.claude/agents/<专家名>.md`（WorkBuddy 专家格式与 Claude Code agent 同构）
 - 安装路径（已在真实 WorkBuddy 验证）：复制进 `~/.workbuddy/plugins/marketplaces/my-experts/plugins/`
