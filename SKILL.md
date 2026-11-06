@@ -18,7 +18,7 @@ description: 挖掘 Claude Code 会话转录为长记忆（journal markdown）�
 
 ## /memory-mine forge — 蒸馏领域专家
 
-用法：`node <本技能目录>/scripts/forge.mjs [--scope 类目substring] [--lang zh] [--name 名] [--avatar png路径] [--project 绝对路径]`
+用法：`node <本技能目录>/scripts/forge.mjs [--scope 类目substring] [--lang zh] [--name 名] [--project-name 显示项目名] [--avatar png路径] [--project 绝对路径]`
 
 - 产出 `expert-out/<名>/`（WorkBuddy 专家插件，已过官方 validator）+ `~/.claude/agents/<名>.md`
 - 默认人格：首席平台架构师（categoryId 02-Engineering）
