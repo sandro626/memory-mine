@@ -17,7 +17,7 @@ test('429 退避重试后成功', async () => {
   const sleeps = [];
   const r = await callLLM({ ...base, sleep: async ms => sleeps.push(ms), fetchImpl: async () => { if (++n === 1) return { status: 429, ok: false }; return ok; } });
   assert.equal(r.text, 'hi');
-  assert.deepEqual(sleeps, [500]);
+  assert.deepEqual(sleeps, [15000]); // 429 走 15s 起步的限流窗口退避
 });
 
 test('400 致命错误不重试', async () => {

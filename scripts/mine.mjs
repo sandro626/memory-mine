@@ -87,11 +87,13 @@ async function mineOne(x) {
 }
 
 const queue = [...selected];
-await Promise.all(Array.from({ length: 2 }, async () => {
+const pace = ms => new Promise(r => setTimeout(r, ms));
+// 并发 1 + 每请求 1s 节流：智谱 TPM 限流实证（并发 2 连续大请求会连环 429 熔断）
+await Promise.all(Array.from({ length: 1 }, async () => {
   while (queue.length && !breaker.tripped) {
     const x = queue.shift();
     if (!x) break;
-    try { await mineOne(x); }
+    try { await mineOne(x); await pace(1000); }
     catch (e) {
       stats.failed++;
       failedFiles.push(x.f);
