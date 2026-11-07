@@ -40,16 +40,20 @@ export function parseClusters(indexText) {
   return clusters.filter(c => c.files.length > 0);
 }
 
-export function buildCluster({ clusterName, corpus }) {
+// publicScrub：公开发布模式——生成时即禁止私有标识落进产出
+const SCRUB_RULE = '本产出将公开发布：严禁出现具体公司名/客户名/学校名/项目代号/价格数字/服务器地址与别名/密钥与账号信息/竞对商号；此类内容一律用「某公司/某客户/某项目」替代或直接删除。';
+
+export function buildCluster({ clusterName, corpus, publicScrub = false }) {
   return {
-    system: '你是知识压缩器。把输入的项目记忆语料压缩成 ≤3KB 高密度知识，中文，markdown 小节。优先级：裁定（含为什么）> 复发坑（判别方法+修法）> 规范 > 背景。只保留对未来工程决策有用的事实，保留关键文件路径与数值。严禁编造语料中没有的内容。',
+    system: '你是知识压缩器。把输入的项目记忆语料压缩成 ≤3KB 高密度知识，中文，markdown 小节。优先级：裁定（含为什么）> 复发坑（判别方法+修法）> 规范 > 背景。只保留对未来工程决策有用的事实，保留关键文件路径与数值。严禁编造语料中没有的内容。' + (publicScrub ? SCRUB_RULE : ''),
     user: `类目：${clusterName}\n\n语料：\n${corpus}\n\n输出 ≤3KB 高密度知识 markdown（不要用代码块包裹）。`,
   };
 }
 
-export function buildPersona({ clusterOutputs, projectName, lang }) {
+export function buildPersona({ clusterOutputs, projectName, lang, personaTitle, publicScrub = false }) {
+  const title = personaTitle || `${projectName} 首席平台架构师`;
   return {
-    system: `你是专家人格撰写者。基于给定知识段，撰写「${projectName} 首席平台架构师」人格文档（${lang === 'zh' ? '中文' : 'English'}）。结构：一级标题「首席平台架构师」与 3 句内身份定位 → 「## 工作原则」（5 条内）→ 每个知识段一节（保留原文高密度事实，不稀释）→ 最后「## 业务红线与语境」（把语料中的用户裁定/禁令集中放此节）。总长 ≤30KB。严禁编造。`,
+    system: `你是专家人格撰写者。基于给定知识段，撰写「${title}」人格文档（${lang === 'zh' ? '中文' : 'English'}）。结构：一级标题「${title}」与 3 句内身份定位 → 「## 工作原则」（5 条内）→ 每个知识段一节（保留原文高密度事实，不稀释）→ 最后「## 工程红线与判例」（把语料中的工程裁定/禁令集中放此节）。总长 ≤30KB。严禁编造。` + (publicScrub ? SCRUB_RULE : ''),
     user: clusterOutputs.map(c => `【${c.name}】\n${c.text}`).join('\n\n'),
   };
 }

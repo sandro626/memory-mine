@@ -12,10 +12,12 @@ import { validateExpertDir } from './lib/validate.mjs';
 const args = process.argv.slice(2);
 const argValue = f => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : null; };
 const cwd = argValue('--project') || process.cwd();
-const scope = argValue('--scope');
+const scopes = (argValue('--scope') || '').split(',').map(s => s.trim()).filter(Boolean); // 逗号分隔多选
 const lang = argValue('--lang') || 'zh';
 const avatarArg = argValue('--avatar');
 const projectNameOverride = argValue('--project-name');
+const personaTitle = argValue('--title');   // 人格标题覆盖（公开版用通用头衔）
+const PUBLIC = args.includes('--public');   // 公开脱敏模式：生成时即禁私有标识
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 
 const { slug, memoryDir } = resolveProjectDir({ cwd });
@@ -32,7 +34,7 @@ if (existsSync(journalDir)) {
   const jf = readdirSync(journalDir).filter(f => f.endsWith('.md')).sort().reverse().slice(0, 30);
   if (jf.length) clusters.push({ name: '近期会话判例', files: jf.map(f => 'journal/' + f) });
 }
-if (scope) clusters = clusters.filter(c => c.name.includes(scope));
+if (scopes.length) clusters = clusters.filter(c => scopes.some(s => c.name.includes(s)));
 if (clusters.length === 0) {
   clusters = [{
     name: '全部',
@@ -65,7 +67,7 @@ for (const c of clusters) {
   }
   if (!corpus.trim()) continue;
   // glm-5.3 是思考模型：thinking 块消耗输出 token 预算，4096 默认值会被烧光导致正文 0 字符，故显式抬到 32K（上限非目标，无额外成本）
-  const { text } = await callLLM({ ...cfg, ...buildCluster({ clusterName: c.name, corpus }), maxTokens: 32768 });
+  const { text } = await callLLM({ ...cfg, ...buildCluster({ clusterName: c.name, corpus, publicScrub: PUBLIC }), maxTokens: 32768 });
   const trimmed = text.trim();
   if (trimmed) writeFileSync(cachePath, trimmed);
   outputs.push({ name: c.name, text: trimmed });
@@ -80,7 +82,7 @@ let persona = existsSync(personaPath) ? readFileSync(personaPath, 'utf8').trim()
 if (persona) {
   console.log(`[cache] persona → ${persona.length} 字符`);
 } else {
-  persona = (await callLLM({ ...cfg, ...buildPersona({ clusterOutputs: outputs, projectName, lang }), maxTokens: 32768 })).text.trim();
+  persona = (await callLLM({ ...cfg, ...buildPersona({ clusterOutputs: outputs, projectName, lang, personaTitle, publicScrub: PUBLIC }), maxTokens: 32768 })).text.trim();
   if (persona) writeFileSync(personaPath, persona);
 }
 if (persona.length > 30720) persona = persona.slice(0, 30720) + '\n…(已按 30KB 预算截断)';
