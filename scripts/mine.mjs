@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// /memory-mine 主链：枚举→抽取→分块→map→reduce→journal→台账（并发3，连续10失败熔断）
+// /memory-mine 主链：枚举→抽取→分块→map→reduce→journal→台账（并发2，连续10失败熔断）
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadConfig, resolveProjectDir } from './lib/config.mjs';
@@ -60,12 +60,13 @@ async function mineOne(x) {
   const chunks = chunkText(renderConversation(messages));
   const notes = [];
   for (const c of chunks) {
-    const { text } = await callLLM({ ...cfg, ...buildMap({ conversationText: c }), breaker });
+    // glm-5.3 思考块消耗输出预算，4096 偶发被烧光致静默空产出；大请求并发过高会被网关掐连接，故 maxTokens 16K + retry 3
+    const { text } = await callLLM({ ...cfg, ...buildMap({ conversationText: c }), maxTokens: 16384, retry: 3, breaker });
     if (text.trim() !== 'NONE') notes.push(text.trim());
   }
   let out = { skip: true };
   if (notes.length > 0) {
-    const { text } = await callLLM({ ...cfg, ...buildReduce({ mapNotes: notes, knownIndex, recentTitles }), breaker });
+    const { text } = await callLLM({ ...cfg, ...buildReduce({ mapNotes: notes, knownIndex, recentTitles }), maxTokens: 16384, retry: 3, breaker });
     out = parseReduceOutput(text);
   }
   if (out.skip) {
@@ -86,7 +87,7 @@ async function mineOne(x) {
 }
 
 const queue = [...selected];
-await Promise.all(Array.from({ length: 3 }, async () => {
+await Promise.all(Array.from({ length: 2 }, async () => {
   while (queue.length && !breaker.tripped) {
     const x = queue.shift();
     if (!x) break;
